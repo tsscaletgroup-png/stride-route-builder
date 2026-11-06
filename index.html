@@ -88,7 +88,8 @@ try {
 const $=id=>document.getElementById(id);
 const ROUTER='https://valhalla1.openstreetmap.de/route';
 const ELEVATION='https://api.open-meteo.com/v1/elevation';
-const MAX=25;
+const MAX=50;
+const ROUTE_BATCH_SIZE=10;
 let points=[],geometry=[],distance=0,ascent=null,ready=false,mode='start',markerLayer=L.layerGroup(),line=null,outline=null,controller=null,serial=0,toastTimer=null,routeTimer=null;
 const APP_URL='https://tsscaletgroup-png.github.io/stride-route-builder/';
 const map=L.map('map',{zoomControl:true}).setView([59.9139,10.7522],13);
@@ -174,22 +175,43 @@ async function elevation(coords,requestId){
 async function calculate(){
  if(points.length<2){status('Add a second point to create a route.');return}
  clearTimeout(routeTimer);
- if(controller)controller.abort();controller=new AbortController();const req=++serial;ready=false;$('share').disabled=true;$('gpx').disabled=true;status('Finding walkable streets and paths…',true);
- const payload={locations:points.map(p=>({lat:p.lat,lon:p.lng,type:'break'})),costing:'pedestrian',costing_options:{pedestrian:{use_tracks:0.65,use_hills:0.5}},units:'kilometers'};
+ if(controller)controller.abort();controller=new AbortController();const req=++serial;ready=false;$('share').disabled=true;$('gpx').disabled=true;
+ const batchCount=Math.ceil((points.length-1)/(ROUTE_BATCH_SIZE-1));
+ let coords=[],totalDistance=0;
  try{
-  const response=await fetch(ROUTER,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
-  if(!response.ok)throw Error('Routing service returned '+response.status);
-  const result=await response.json();if(req!==serial)return;
-  const legs=result&&result.trip&&result.trip.legs||[];let coords=[];
-  legs.forEach(leg=>{if(leg.shape){const part=decode6(leg.shape);if(coords.length&&part.length&&hav(coords[coords.length-1],part[0])<.01)part.shift();coords=coords.concat(part)}});
-  if(coords.length<2)throw Error(result?.trip?.status_message||'No walkable route found between the selected points.');
-  geometry=coords;distance=Number(result.trip.summary&&result.trip.summary.length)||lengthKm(coords);line.setLatLngs(coords);outline.setLatLngs(coords);line.setStyle({color:'#477632',dashArray:'',opacity:.92});ready=true;updateStats();status('Road-following preview found. Estimating elevation gain…',true);
+  // Valhalla instances enforce a maximum number of locations per request.
+  // Route up to 10 locations at a time and overlap one endpoint between batches.
+  for(let batchIndex=0,start=0;start<points.length-1;batchIndex++,start+=ROUTE_BATCH_SIZE-1){
+   if(req!==serial)return;
+   const end=Math.min(start+ROUTE_BATCH_SIZE,points.length);
+   const batch=points.slice(start,end);
+   status(batchCount>1?'Routing section '+(batchIndex+1)+' of '+batchCount+' (waypoints '+(start+1)+'–'+end+')…':'Finding walkable streets and paths…',true);
+   const payload={locations:batch.map(p=>({lat:p.lat,lon:p.lng,type:'break'})),costing:'pedestrian',costing_options:{pedestrian:{use_tracks:0.65,use_hills:0.5}},units:'kilometers'};
+   const response=await fetch(ROUTER,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-Client-Id':'scaletenterprises.com'},body:JSON.stringify(payload),signal:controller.signal});
+   let result={};
+   try{result=await response.json()}catch(e){}
+   if(!response.ok)throw Error('Routing section '+(batchIndex+1)+' failed ('+response.status+'): '+(result.error||result.status_message||'Routing service error'));
+   if(req!==serial)return;
+   const trip=result&&result.trip;
+   const legs=trip&&trip.legs||[];
+   let segmentCoords=[];
+   legs.forEach(leg=>{if(leg.shape){const part=decode6(leg.shape);if(segmentCoords.length&&part.length&&hav(segmentCoords[segmentCoords.length-1],part[0])<.01)part.shift();segmentCoords=segmentCoords.concat(part)}});
+   if(segmentCoords.length<2)throw Error('No walkable route found in section '+(batchIndex+1)+' of '+batchCount+'. '+(trip&&trip.status_message||'Try moving a waypoint closer to a mapped path.'));
+   // The first coordinate of each new batch is the same waypoint where the prior batch ended.
+   if(coords.length&&segmentCoords.length&&hav(coords[coords.length-1],segmentCoords[0])<.05)segmentCoords.shift();
+   coords=coords.concat(segmentCoords);
+   const segmentLength=Number(trip.summary&&trip.summary.length);
+   totalDistance+=Number.isFinite(segmentLength)&&segmentLength>0?segmentLength:lengthKm(segmentCoords);
+  }
+  if(req!==serial)return;
+  if(coords.length<2)throw Error('No walkable route found between the selected points.');
+  geometry=coords;distance=totalDistance||lengthKm(coords);line.setLatLngs(coords);outline.setLatLngs(coords);line.setStyle({color:'#477632',dashArray:'',opacity:.92});ready=true;updateStats();status('Road-following route found. Estimating elevation gain…',true);
   try{ascent=await elevation(coords,req)}catch(e){ascent=null}if(req!==serial)return;
   const complete=points.length>=2&&points[points.length-1].type==='finish';
   updateStats();$('share').disabled=!complete;$('gpx').disabled=!complete;
   status(ascent===null?'Route preview updated. Elevation estimate is unavailable right now.':(complete?'Route ready. Drag markers or add and remove points to edit.':'Route preview updated. Add stops or choose Finish when the route is complete.'));
   saveDraft();fit(false)
- }catch(err){if(err.name==='AbortError'||req!==serial)return;geometry=[];distance=0;ascent=null;ready=false;const preview=points.map(p=>[p.lat,p.lng]);line.setLatLngs(preview);outline.setLatLngs(preview);line.setStyle({color:'#6d8d58',dashArray:'7 8',opacity:.9});updateStats();$('share').disabled=true;$('gpx').disabled=true;status('Could not match this segment to a walkable path. The dashed guide connects your waypoints directly; try moving a point closer to a mapped path.');}
+ }catch(err){if(err.name==='AbortError'||req!==serial)return;geometry=[];distance=0;ascent=null;ready=false;const preview=points.map(p=>[p.lat,p.lng]);line.setLatLngs(preview);outline.setLatLngs(preview);line.setStyle({color:'#6d8d58',dashArray:'7 8',opacity:.9});updateStats();$('share').disabled=true;$('gpx').disabled=true;status('Could not match the route: '+(err.message||'routing failed')+'. The dashed guide connects your waypoints directly; try moving a point closer to a mapped path.');}
 }
 $('calculate').addEventListener('click',calculate);
 function fit(animate){if(geometry.length>1)map.fitBounds(line.getBounds().pad(.12),{animate:animate!==false,maxZoom:16});else if(points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])).pad(.25),{animate:animate!==false,maxZoom:16})}
