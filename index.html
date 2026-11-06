@@ -219,13 +219,64 @@ $('fit').onclick=()=>fit(true);
 $('locate').onclick=()=>{if(!navigator.geolocation){toast('Location is not available in this browser.');return}navigator.geolocation.getCurrentPosition(pos=>{map.setView([pos.coords.latitude,pos.coords.longitude],15) },()=>toast('Could not access your location.'))};
 function saveDraft(){try{localStorage.setItem('stride-draft',JSON.stringify({name:$('routeName').value,points:points}))}catch(e){}}
 $('routeName').addEventListener('input',saveDraft);
-function base64url(obj){const bytes=new TextEncoder().encode(JSON.stringify(obj));let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'')}
-function fromBase64url(s){s=s.replace(/-/g,'+').replace(/_/g,'/');s+='='.repeat((4-s.length%4)%4);const binary=atob(s);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes))}
+function base64urlBytes(bytes){let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'')}
+function fromBase64urlBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');s+='='.repeat((4-s.length%4)%4);const binary=atob(s);return Uint8Array.from(binary,c=>c.charCodeAt(0))}
+function writeVarUint(out,value){
+ if(!Number.isSafeInteger(value)||value<0)throw Error('Invalid route value');
+ while(value>=128){out.push((value%128)|128);value=Math.floor(value/128)}
+ out.push(value)
+}
+function readVarUint(bytes,state){
+ let value=0,multiplier=1;
+ for(let i=0;i<6;i++){
+  if(state.index>=bytes.length)throw Error('Incomplete route link');
+  const b=bytes[state.index++];value+=(b&127)*multiplier;
+  if(!Number.isSafeInteger(value))throw Error('Invalid route link');
+  if((b&128)===0)return value;
+  multiplier*=128;
+ }
+ throw Error('Invalid route link')
+}
+function zigzagEncode(n){return n>=0?n*2:(-n*2)-1}
+function zigzagDecode(n){return n%2===0?n/2:-((n+1)/2)}
+function encodeCompactRoute(name,routePoints){
+ const out=[2],nameBytes=new TextEncoder().encode(name);
+ writeVarUint(out,nameBytes.length);nameBytes.forEach(b=>out.push(b));writeVarUint(out,routePoints.length);
+ let prevLat=0,prevLng=0;
+ routePoints.forEach(p=>{
+  // 1e-5 degree precision is roughly metre-level and keeps coordinate deltas compact.
+  const lat=Math.round(p.lat*1e5),lng=Math.round(p.lng*1e5);
+  writeVarUint(out,zigzagEncode(lat-prevLat));writeVarUint(out,zigzagEncode(lng-prevLng));
+  prevLat=lat;prevLng=lng;
+ });
+ return base64urlBytes(out)
+}
+function decodeCompactRoute(s){
+ const bytes=fromBase64urlBytes(s),state={index:0};
+ if(bytes[state.index++]!==2)throw Error('Unsupported route-link version');
+ const nameLength=readVarUint(bytes,state);
+ if(nameLength>512||state.index+nameLength>bytes.length)throw Error('Invalid route name in link');
+ const name=new TextDecoder().decode(bytes.slice(state.index,state.index+nameLength));state.index+=nameLength;
+ const count=readVarUint(bytes,state);
+ if(count<2||count>MAX)throw Error('Route link must contain between 2 and '+MAX+' points');
+ let lat=0,lng=0;const points=[];
+ for(let i=0;i<count;i++){
+  lat+=zigzagDecode(readVarUint(bytes,state));lng+=zigzagDecode(readVarUint(bytes,state));
+  const p={lat:lat/1e5,lng:lng/1e5,type:'via'};
+  if(!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||Math.abs(p.lat)>90||Math.abs(p.lng)>180)throw Error('Invalid route coordinates');
+  points.push([p.lat,p.lng]);
+ }
+ if(state.index!==bytes.length)throw Error('Unexpected data in route link');
+ return {v:2,name,points}
+}
+function base64url(obj){const bytes=new TextEncoder().encode(JSON.stringify(obj));return base64urlBytes(bytes)}
+function fromBase64url(s){return JSON.parse(new TextDecoder().decode(fromBase64urlBytes(s)))}
 function share(){
  if(!ready||points.length<2||points[points.length-1].type!=='finish')return;
- const payload={v:1,name:$('routeName').value.trim()||'Running route',points:points.map(p=>[Number(p.lat.toFixed(6)),Number(p.lng.toFixed(6))])};
- // Always share from the canonical site URL: this strips chat attribution, query strings and tracking parameters.
- const url=APP_URL+'#r='+base64url(payload);
+ const routeName=$('routeName').value.trim()||'Running route';
+ const compact=encodeCompactRoute(routeName,points);
+ // Compact delta-encoded coordinates keep shared URLs much shorter, with no URL-shortener dependency.
+ const url=APP_URL+'#r=v2.'+compact;
  $('shareUrl').value=url;$('openShare').href=url;
  $('shareDialog').showModal();$('shareUrl').focus();$('shareUrl').select();
 }
@@ -244,7 +295,9 @@ $('gpx').onclick=()=>{
 };
 function loadShared(){
  const match=location.hash.match(/(?:^#|&)r=([^&]+)/);if(!match)return false;
- try{const data=fromBase64url(match[1]);if(data.v!==1||!Array.isArray(data.points)||data.points.length<2||data.points.length>MAX)throw Error('Invalid route link');
+ try{const token=match[1];
+ const data=token.startsWith('v2.')?decodeCompactRoute(token.slice(3)):fromBase64url(token);
+ if(![1,2].includes(data.v)||!Array.isArray(data.points)||data.points.length<2||data.points.length>MAX)throw Error('Invalid route link');
  points=data.points.map(pair=>({lat:Number(pair[0]),lng:Number(pair[1]),type:'via'}));if(points.some(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||Math.abs(p.lat)>90||Math.abs(p.lng)>180))throw Error('Invalid route coordinates');points[0].type='start';points[points.length-1].type='finish';$('routeName').value=String(data.name||'Shared running route').slice(0,70);render();status('Shared route loaded. Rebuilding route…',true);invalidate();return true
  }catch(e){toast(e.message||'Could not read shared route.');return false}
 }
