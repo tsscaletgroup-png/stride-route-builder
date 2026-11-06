@@ -73,6 +73,17 @@
 <script>
 (function(){
 'use strict';
+// Strip ChatGPT and other UTM campaign tags from the visible URL without reloading.
+// Shared route payloads live in the hash, so links continue to open the same route.
+try {
+ const cleanUrl = new URL(window.location.href);
+ ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'].forEach(key => cleanUrl.searchParams.delete(key));
+ if (cleanUrl.href !== window.location.href) {
+  window.history.replaceState(null, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+ }
+} catch (error) {
+ // URL cleanup is best-effort and must never prevent the route editor from loading.
+}
 const $=id=>document.getElementById(id);
 const ROUTER='https://valhalla1.openstreetmap.de/route';
 const ELEVATION='https://api.open-meteo.com/v1/elevation';
