@@ -126,7 +126,7 @@ function addPoint(lat,lng){
  if(mode==='start'){if(points.length){toast('Remove the existing route first to choose a new start.');return}points=[p];setMode('via')}
  else if(mode==='via'){if(!points.length){toast('Place a start point first.');return}if(points[points.length-1].type==='finish')points.splice(points.length-1,0,p);else points.push(p)}
  else if(mode==='finish'){if(!points.length){toast('Place a start point first.');return}if(points.length===1)points.push(p);else if(points[points.length-1].type==='finish')points[points.length-1]=p;else points.push(p);setMode('via')}
- normalize();invalidate();render();if(points.length>1&&points[points.length-1].type==='finish')calculate()
+ normalize();invalidate();render()
 }
 map.on('click',e=>addPoint(e.latlng.lat,e.latlng.lng));
 function decode6(str){
