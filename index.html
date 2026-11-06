@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#17241d">
+<title>Stride — Running Route Builder</title>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--ink:#17241d;--muted:#748078;--line:#e5ebe5;--paper:#fff;--bg:#f3f6f1;--lime:#c9f36d;--green:#477632;--blue:#477fbd;--orange:#ed8956;--shadow:0 12px 36px #1b2b1d16}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}button,input{font:inherit}button{cursor:pointer}.app{height:100%;display:flex;flex-direction:column}.top{height:66px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:#fff;border-bottom:1px solid var(--line);z-index:500}.brand{display:flex;align-items:center;gap:11px}.mark{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;background:var(--ink);color:var(--lime);font-size:21px}.brand strong{font-size:17px;letter-spacing:-.6px}.tag{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-left:6px}.top-right{display:flex;align-items:center;gap:10px}.online{font-size:11px;color:#69766d;background:#f5f8f3;border:1px solid var(--line);padding:7px 10px;border-radius:50px}.dot{display:inline-block;width:7px;height:7px;background:#77b56b;border-radius:50%;margin-right:6px}.quiet{border:0;background:transparent;color:#758178;padding:9px 12px;font-size:12px;font-weight:700;border-radius:9px}.quiet:hover{background:#f3f6f1}.layout{min-height:0;flex:1;display:grid;grid-template-columns:360px minmax(0,1fr)}aside{background:#fff;border-right:1px solid var(--line);overflow:auto;padding:20px 19px 24px;z-index:400}.eyebrow{font-size:10px;color:#87938a;letter-spacing:.14em;text-transform:uppercase;font-weight:800}.route-name{width:100%;border:1px solid var(--line);background:#fafcf9;padding:12px 13px;border-radius:11px;margin-top:8px;font-size:15px;font-weight:750;outline:none}.route-name:focus{border-color:#9fca71;box-shadow:0 0 0 3px #c9f36d44}.stats{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:7px;margin:15px 0 20px}.stat{padding:11px 9px;border:1px solid var(--line);border-radius:11px;min-width:0}.stat:first-child{background:#f4fae9;border-color:#e5f1d3}.stat small{display:block;color:#7d8a80;font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:800}.stat b{display:block;font-size:20px;letter-spacing:-.8px;margin-top:4px;white-space:nowrap}.stat em{font-style:normal;font-size:10px;color:#7b897f}.section{margin-top:19px}.section-head{display:flex;align-items:center;justify-content:space-between}.section-head strong{font-size:13px}.sub{font-size:11px;color:var(--muted);margin-top:4px}.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}.tool{border:1px solid var(--line);background:#fff;color:#536258;border-radius:11px;padding:10px 4px;font-size:11px;font-weight:750;display:flex;flex-direction:column;align-items:center;gap:6px}.tool span{width:25px;height:25px;border-radius:8px;background:#f0f5ec;display:grid;place-items:center;font-size:13px}.tool.active{background:var(--ink);color:white;border-color:var(--ink)}.tool.active span{background:var(--lime);color:var(--ink)}.hint{padding:10px 11px;background:#f5f8f3;border-radius:10px;color:#637168;font-size:11px;margin-top:10px;min-height:44px}.waypoints{margin-top:9px}.wp{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 2px;border-bottom:1px solid #f0f3ef}.pin{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:800}.pin.start{background:var(--green)}.pin.finish{background:var(--orange)}.pin.via{background:var(--blue)}.wp b{font-size:11px}.wp small{display:block;font-size:9px;color:#859188;margin-top:2px;font-variant-numeric:tabular-nums}.wp-actions{display:flex;gap:1px}.mini{border:0;background:transparent;color:#89968d;border-radius:6px;width:25px;height:25px}.mini:hover{background:#f1f5ee;color:var(--ink)}.mini.del:hover{background:#fff0ec;color:#bf5947}.empty{border:1px dashed #dce5dc;border-radius:10px;padding:16px 12px;text-align:center;color:#87948b;font-size:11px;margin-top:10px}.actions{border-top:1px solid var(--line);margin-top:18px;padding-top:15px}.primary,.secondary{width:100%;border:0;border-radius:11px;padding:12px 14px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px}.primary{background:var(--lime);color:#23351d;box-shadow:0 5px 14px #9dbd5b26}.primary:hover:not(:disabled){background:#bfea56;transform:translateY(-1px)}.secondary{background:#fff;border:1px solid var(--line);color:#55645a}.secondary:hover:not(:disabled){background:#f8faf6;border-color:#cbd8c8}.primary:disabled,.secondary:disabled{opacity:.4;cursor:not-allowed}.action-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.footnote{text-align:center;color:#8a978e;font-size:9px;margin-top:10px;line-height:1.5}.status{font-size:11px;color:#65736a;margin-top:12px;min-height:32px;line-height:1.45}.status.busy{color:#547b37}.mapwrap{position:relative;min-width:0;min-height:0;background:#e7ede5}#map{position:absolute;inset:0}.map-label{position:absolute;z-index:300;right:17px;top:16px;background:#ffffffed;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:10px;color:#67756b;font-weight:800;box-shadow:var(--shadow)}.map-actions{position:absolute;z-index:300;bottom:19px;right:18px;display:flex;gap:8px}.map-actions button{background:var(--ink);color:#fff;border:0;border-radius:10px;padding:10px 13px;font-size:11px;font-weight:800;box-shadow:var(--shadow)}.map-actions button:hover{background:#2b4434}.leaflet-container{font:inherit}.leaflet-div-icon{background:transparent;border:0}.marker{width:27px;height:27px;border:3px solid #fff;border-radius:50%;display:grid;place-items:center;color:white;font-size:10px;font-weight:900;box-shadow:0 2px 9px #17241d55}.marker.start{background:var(--green)}.marker.finish{background:var(--orange)}.marker.via{background:var(--blue)}.toast{position:fixed;z-index:999;bottom:20px;left:50%;transform:translateX(-50%);background:#17241d;color:white;padding:10px 15px;border-radius:10px;font-size:12px;box-shadow:var(--shadow);display:none;max-width:90vw}.toast.show{display:block}@media(max-width:800px){.layout{grid-template-columns:1fr;grid-template-rows:minmax(290px,42vh) minmax(0,1fr)}.mapwrap{grid-row:1}aside{grid-row:2;border-right:0;border-top:1px solid var(--line);padding:15px 15px 22px}.top{height:58px;padding:0 13px}.tag{display:none}.online{display:none}.map-label{top:9px;right:9px}.map-actions{bottom:10px;right:10px}.map-actions button{padding:9px 10px}.stats{margin:12px 0 15px}.section{margin-top:15px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="brand"><div class="mark">↗</div><div><strong>stride</strong><span class="tag">route builder</span></div></div><div class="top-right"><span class="online"><i class="dot"></i>OpenStreetMap</span><button class="quiet" id="reset">New route</button></div></header>
+<div class="layout">
+<aside>
+<div class="eyebrow">Your running route</div>
+<input class="route-name" id="routeName" value="My running route" maxlength="70" aria-label="Route name">
+<div class="stats">
+<div class="stat"><small>Distance</small><b id="distance">—</b><em>km</em></div>
+<div class="stat"><small>Climb</small><b id="climb">—</b><em>m up</em></div>
+<div class="stat"><small>Waypoints</small><b id="count">0</b><em>points</em></div>
+</div>
+<div class="section">
+<div class="section-head"><strong>Draw your route</strong></div>
+<div class="sub">Choose a point type, then click the map.</div>
+<div class="tools">
+<button class="tool active" data-mode="start"><span>●</span>Start</button>
+<button class="tool" data-mode="via"><span>＋</span>Stop</button>
+<button class="tool" data-mode="finish"><span>◆</span>Finish</button>
+</div>
+<div class="hint" id="hint">Click the map to place your starting point. Then add stops and a finish.</div>
+</div>
+<div class="section">
+<div class="section-head"><strong>Route points</strong><span class="eyebrow" id="pointCount">0 POINTS</span></div>
+<div class="waypoints" id="waypoints"><div class="empty">Your route is empty.<br>Click the map to get started.</div></div>
+</div>
+<div class="actions">
+<button class="primary" id="calculate" disabled>↗ &nbsp; Calculate walking route</button>
+<div class="action-row">
+<button class="secondary" id="share" disabled>↗ Share link</button>
+<button class="secondary" id="gpx" disabled>↓ Export GPX</button>
+</div>
+<div class="footnote">Routes follow mapped pedestrian streets and paths.<br>Elevation gain is an estimate from terrain data.</div>
+</div>
+<div class="status" id="status">Ready when you are — map starts in Oslo.</div>
+</aside>
+<div class="mapwrap"><div id="map"></div><div class="map-label">● &nbsp; WALKABLE ROUTES</div><div class="map-actions"><button id="locate">◎ My location</button><button id="fit">Fit route</button></div></div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const ROUTER='https://valhalla1.openstreetmap.de/route';
+const ELEVATION='https://api.open-meteo.com/v1/elevation';
+const MAX=25;
+let points=[],geometry=[],distance=0,ascent=null,ready=false,mode='start',markerLayer=L.layerGroup(),line=null,outline=null,controller=null,serial=0,toastTimer=null;
+const map=L.map('map',{zoomControl:true}).setView([59.9139,10.7522],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+markerLayer.addTo(map);
+outline=L.polyline([],{color:'#fff',weight:10,opacity:.85,lineCap:'round',lineJoin:'round'}).addTo(map);
+line=L.polyline([],{color:'#477632',weight:6,opacity:.92,lineCap:'round',lineJoin:'round'}).addTo(map);
+function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
+function status(msg,busy){$('status').textContent=msg;$('status').className='status'+(busy?' busy':'')}
+function setMode(next){mode=next;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));const hints={start:'Click the map to place your starting point.',via:'Click the map to add an intermediate stop. You can add several.',finish:'Click the map to set the finish. The route will be calculated.'};$('hint').textContent=hints[mode]}
+document.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+function label(p,i){return p.type==='start'?'A':p.type==='finish'?'B':String(i)}
+function normalize(){if(!points.length)return;points[0].type='start';for(let i=1;i<points.length-1;i++)points[i].type='via';if(points.length>1&&points[points.length-1].type==='finish')points[points.length-1].type='finish'}
+function clearRoute(){geometry=[];distance=0;ascent=null;ready=false;line.setLatLngs([]);outline.setLatLngs([]);updateStats();$('share').disabled=true;$('gpx').disabled=true}
+function invalidate(){clearRoute();if(controller)controller.abort();status('Points changed. Calculate the route to update distance and climb.');saveDraft()}
+function updateStats(){$('distance').textContent=distance?distance.toFixed(2):'—';$('climb').textContent=ascent===null?'—':Math.round(ascent);$('count').textContent=points.length;$('pointCount').textContent=points.length+' POINT'+(points.length===1?'':'S');$('calculate').disabled=points.length<2||points[0].type!=='start'||points[points.length-1].type!=='finish'}
+function iconFor(p,i){const text=label(p,i);return L.divIcon({className:'',html:'<div class="marker '+p.type+'">'+text+'</div>',iconSize:[27,27],iconAnchor:[13,13]})}
+function render(){
+ normalize();markerLayer.clearLayers();
+ points.forEach((p,i)=>{const marker=L.marker([p.lat,p.lng],{draggable:true,icon:iconFor(p,i)}).addTo(markerLayer);marker.on('dragend',e=>{const ll=e.target.getLatLng();points[i].lat=ll.lat;points[i].lng=ll.lng;invalidate();render()})});
+ const list=$('waypoints');list.replaceChildren();
+ if(!points.length){const empty=document.createElement('div');empty.className='empty';empty.innerHTML='Your route is empty.<br>Click the map to get started.';list.appendChild(empty)}
+ points.forEach((p,i)=>{
+  const row=document.createElement('div');row.className='wp';
+  const pin=document.createElement('span');pin.className='pin '+p.type;pin.textContent=label(p,i);
+  const desc=document.createElement('div');const title=document.createElement('b');title.textContent=p.type==='start'?'Start':p.type==='finish'?'Finish':'Stop '+i;const coord=document.createElement('small');coord.textContent=p.lat.toFixed(5)+', '+p.lng.toFixed(5);desc.append(title,coord);
+  const actions=document.createElement('div');actions.className='wp-actions';
+  if(i>0&&i<points.length-1){const up=document.createElement('button');up.className='mini';up.title='Move up';up.textContent='↑';up.onclick=()=>movePoint(i,-1);actions.append(up);const down=document.createElement('button');down.className='mini';down.title='Move down';down.textContent='↓';down.onclick=()=>movePoint(i,1);actions.append(down)}
+  const del=document.createElement('button');del.className='mini del';del.title='Delete point';del.textContent='×';del.onclick=()=>removePoint(i);actions.append(del);
+  row.append(pin,desc,actions);list.appendChild(row);
+ });
+ updateStats()
+}
+function movePoint(i,delta){const j=i+delta;if(j<=0||j>=points.length-1)return;const tmp=points[i];points[i]=points[j];points[j]=tmp;invalidate();render()}
+function removePoint(i){points.splice(i,1);normalize();invalidate();render();setMode(points.length?'via':'start')}
+function addPoint(lat,lng){
+ if(points.length>=MAX){toast('Maximum '+MAX+' route points reached.');return}
+ const p={lat,lng,type:mode};
+ if(mode==='start'){if(points.length){toast('Remove the existing route first to choose a new start.');return}points=[p];setMode('via')}
+ else if(mode==='via'){if(!points.length){toast('Place a start point first.');return}if(points[points.length-1].type==='finish')points.splice(points.length-1,0,p);else points.push(p)}
+ else if(mode==='finish'){if(!points.length){toast('Place a start point first.');return}if(points.length===1)points.push(p);else if(points[points.length-1].type==='finish')points[points.length-1]=p;else points.push(p);setMode('via')}
+ normalize();invalidate();render();if(points.length>1&&points[points.length-1].type==='finish')calculate()
+}
+map.on('click',e=>addPoint(e.latlng.lat,e.latlng.lng));
+function decode6(str){
+ let index=0,lat=0,lng=0,coords=[];
+ while(index<str.length){let result=0,shift=0,b;do{b=str.charCodeAt(index++)-63;result|=(b&31)<<shift;shift+=5}while(b>=32&&index<str.length);lat+=result&1?~(result>>1):(result>>1);
+ result=0;shift=0;do{b=str.charCodeAt(index++)-63;result|=(b&31)<<shift;shift+=5}while(b>=32&&index<str.length);lng+=result&1?~(result>>1):(result>>1);coords.push([lat/1e6,lng/1e6])}
+ return coords
+}
+function hav(a,b){const r=Math.PI/180,d1=(b[0]-a[0])*r,d2=(b[1]-a[1])*r,x=Math.sin(d1/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(d2/2)**2;return 6371*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function lengthKm(coords){let n=0;for(let i=1;i<coords.length;i++)n+=hav(coords[i-1],coords[i]);return n}
+function sample(coords,max){if(coords.length<=max)return coords;const out=[];for(let i=0;i<max;i++)out.push(coords[Math.round(i*(coords.length-1)/(max-1))]);return out}
+async function elevation(coords,requestId){
+ const pts=sample(coords,80),lat=pts.map(p=>p[0]).join(','),lon=pts.map(p=>p[1]).join(',');
+ const res=await fetch(ELEVATION+'?latitude='+encodeURIComponent(lat)+'&longitude='+encodeURIComponent(lon));
+ if(!res.ok)throw Error('Elevation request failed');const data=await res.json();if(requestId!==serial)return null;
+ if(!Array.isArray(data.elevation))throw Error('No terrain data');
+ let total=0;for(let i=1;i<data.elevation.length;i++){const d=Number(data.elevation[i])-Number(data.elevation[i-1]);if(Number.isFinite(d)&&d>1.2)total+=d}return total
+}
+async function calculate(){
+ if(points.length<2||points[points.length-1].type!=='finish'){toast('Add a finish point before calculating.');return}
+ if(controller)controller.abort();controller=new AbortController();const req=++serial;ready=false;$('share').disabled=true;$('gpx').disabled=true;status('Finding walkable streets and paths…',true);
+ const payload={locations:points.map(p=>({lat:p.lat,lon:p.lng,type:'break'})),costing:'pedestrian',costing_options:{pedestrian:{use_tracks:0.65,use_hills:0.5}},units:'kilometers'};
+ try{
+  const response=await fetch(ROUTER,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
+  if(!response.ok)throw Error('Routing service returned '+response.status);
+  const result=await response.json();if(req!==serial)return;
+  const legs=result&&result.trip&&result.trip.legs||[];let coords=[];
+  legs.forEach(leg=>{if(leg.shape){const part=decode6(leg.shape);if(coords.length&&part.length&&hav(coords[coords.length-1],part[0])<.01)part.shift();coords=coords.concat(part)}});
+  if(coords.length<2)throw Error(result?.trip?.status_message||'No walkable route found between the selected points.');
+  geometry=coords;distance=Number(result.trip.summary&&result.trip.summary.length)||lengthKm(coords);line.setLatLngs(coords);outline.setLatLngs(coords);ready=true;updateStats();status('Route found. Estimating elevation gain…',true);
+  try{ascent=await elevation(coords,req)}catch(e){ascent=null}if(req!==serial)return;
+  updateStats();$('share').disabled=false;$('gpx').disabled=false;status(ascent===null?'Route ready. Elevation estimate is unavailable right now.':'Route ready. Drag markers or add and remove points to edit.');saveDraft();fit(false)
+ }catch(err){if(err.name==='AbortError'||req!==serial)return;clearRoute();status('Could not calculate this route. Try moving a point closer to a mapped path.');toast(err.message||'Route calculation failed.')}
+}
+$('calculate').addEventListener('click',calculate);
+function fit(animate){if(geometry.length>1)map.fitBounds(line.getBounds().pad(.12),{animate:animate!==false,maxZoom:16});else if(points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.lat,p.lng])).pad(.25),{animate:animate!==false,maxZoom:16})}
+$('fit').onclick=()=>fit(true);
+$('locate').onclick=()=>{if(!navigator.geolocation){toast('Location is not available in this browser.');return}navigator.geolocation.getCurrentPosition(pos=>{map.setView([pos.coords.latitude,pos.coords.longitude],15) },()=>toast('Could not access your location.'))};
+function saveDraft(){try{localStorage.setItem('stride-draft',JSON.stringify({name:$('routeName').value,points:points}))}catch(e){}}
+$('routeName').addEventListener('input',saveDraft);
+function base64url(obj){const bytes=new TextEncoder().encode(JSON.stringify(obj));let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'')}
+function fromBase64url(s){s=s.replace(/-/g,'+').replace(/_/g,'/');s+='='.repeat((4-s.length%4)%4);const binary=atob(s);const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes))}
+async function share(){
+ if(!ready)return;const payload={v:1,name:$('routeName').value.trim()||'Running route',points:points.map(p=>[Number(p.lat.toFixed(6)),Number(p.lng.toFixed(6))])};
+ const url=location.href.split('#')[0]+'#r='+base64url(payload);
+ try{if(navigator.share)await navigator.share({title:payload.name,text:'Check out my running route on Stride.',url:url});else{await navigator.clipboard.writeText(url);toast('Share link copied.')}}catch(e){if(e.name!=='AbortError'){window.prompt('Copy this route link:',url)}}
+}
+$('share').onclick=share;
+function xml(s){return String(s).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]))}
+$('gpx').onclick=()=>{
+ if(!ready||geometry.length<2)return;const name=$('routeName').value.trim()||'Running route';
+ const trk=geometry.map(p=>'    <trkpt lat="'+p[0].toFixed(6)+'" lon="'+p[1].toFixed(6)+'"></trkpt>').join('\n');
+ const wpts=points.map((p,i)=>'  <wpt lat="'+p.lat.toFixed(6)+'" lon="'+p.lng.toFixed(6)+'"><name>'+(p.type==='start'?'Start':p.type==='finish'?'Finish':'Stop '+i)+'</name></wpt>').join('\n');
+ const file='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Stride" xmlns="http://www.topografix.com/GPX/1/1">\n  <metadata><name>'+xml(name)+'</name></metadata>\n'+wpts+'\n  <trk><name>'+xml(name)+'</name><trkseg>\n'+trk+'\n    </trkseg></trk>\n</gpx>';
+ const url=URL.createObjectURL(new Blob([file],{type:'application/gpx+xml'}));const a=document.createElement('a');a.href=url;a.download=(name.toLowerCase().replace(/[^a-z0-9]+/g,'-')||'running-route')+'.gpx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);toast('GPX exported.')
+};
+function loadShared(){
+ const match=location.hash.match(/(?:^#|&)r=([^&]+)/);if(!match)return false;
+ try{const data=fromBase64url(match[1]);if(data.v!==1||!Array.isArray(data.points)||data.points.length<2||data.points.length>MAX)throw Error('Invalid route link');
+ points=data.points.map(pair=>({lat:Number(pair[0]),lng:Number(pair[1]),type:'via'}));if(points.some(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||Math.abs(p.lat)>90||Math.abs(p.lng)>180))throw Error('Invalid route coordinates');points[0].type='start';points[points.length-1].type='finish';$('routeName').value=String(data.name||'Shared running route').slice(0,70);render();status('Shared route loaded. Rebuilding route…',true);calculate();return true
+ }catch(e){toast(e.message||'Could not read shared route.');return false}
+}
+$('reset').onclick=()=>{if(controller)controller.abort();points=[];clearRoute();$('routeName').value='My running route';setMode('start');render();status('Ready when you are — map starts in Oslo.');history.replaceState(null,'',location.href.split('#')[0]);saveDraft()};
+if(!loadShared()){
+ try{const draft=JSON.parse(localStorage.getItem('stride-draft')||'null');if(draft&&Array.isArray(draft.points)&&draft.points.length<=MAX){points=draft.points;$('routeName').value=draft.name||'My running route';render();if(points.length>1&&points[points.length-1].type==='finish')calculate();else status('Draft restored. Add a finish point to calculate the route.')}}catch(e){}
+}
+render();if(points.length)setMode(points[points.length-1].type==='finish'?'via':'via');
+window.addEventListener('resize',()=>map.invalidateSize());setTimeout(()=>map.invalidateSize(),200);
+})();
+</script>
+</body>
+</html>
